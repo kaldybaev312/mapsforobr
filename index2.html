@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map with Marker Clustering</title>
+    <!-- Подключение стилей Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <!-- Подключение Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Подключение библиотеки для кластеризации маркеров -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/geojson-vt@3.2.0/geojson-vt.js"></script>
+<!-- <script src="[path to js]/leaflet-geojson-vt.js"></script> -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    
+
+    <script src="lic.js" defer></script>
+    <script src="map.js"></script>
+    <style>
+        /* Определение стиля контейнера карты */
+        #map { height: 100vh; }
+        
+        /* Стили для кластеров */
+        .cluster-green {
+            background-color: rgba(0, 255, 0, 0.8);
+            border: 2px solid rgba(0, 255, 0, 1);
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            line-height: 40px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .cluster-red {
+            background-color: rgba(255, 0, 0, 0.8);
+            border: 2px solid rgba(255, 0, 0, 1);
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            line-height: 40px;
+            width: 40px;
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Контейнер для карты -->
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([41.2044, 74.7661], 7); // Установка центра карты и масштаба
+
+        // Добавление плиток OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Характеристики маркеров
+        var greenMarkerOptions = {
+            iconUrl: 'lic.png',
+            iconSize: [32, 37],
+            iconAnchor: [16, 37],
+            popupAnchor: [0, -37]
+        };
+
+        var redMarkerOptions = {
+            iconUrl: 'school.png',
+            iconSize: [32, 37],
+            iconAnchor: [16, 37],
+            popupAnchor: [0, -37]
+        };
+
+        // Создание объектов для кластеризации маркеров разных видов
+        var greenMarkers = L.markerClusterGroup({
+            maxClusterRadius: 60, // Установка максимального радиуса кластера
+            iconCreateFunction: function(cluster) {
+                var childCount = cluster.getChildCount();
+                var className = 'cluster-green leaflet-marker-icon leaflet-div-icon';
+                return new L.DivIcon({ html: '<div><span>' + childCount + '</span></div>', className: className, iconSize: [40, 40] });
+            }
+        });
+        
+        var redMarkers = L.markerClusterGroup({
+            maxClusterRadius: 40, // Установка максимального радиуса кластера
+            iconCreateFunction: function(cluster) {
+                var childCount = cluster.getChildCount();
+                var className = 'cluster-red leaflet-marker-icon leaflet-div-icon';
+                return new L.DivIcon({ html: '<div><span>' + childCount + '</span></div>', className: className, iconSize: [40, 40] });
+            }
+        });
+
+        // Функция для добавления маркера по координатам и типу маркера
+        function addMarker(lat, lng, popupContent, markerOptions, group) {
+            var marker = L.marker([lat, lng], { icon: L.icon(markerOptions) });
+            marker.bindPopup(popupContent);
+            group.addLayer(marker);
+        }
+
+
+        L.geoJSON(geoJs, {
+    pointToLayer: function(feature, latlng) {
+        // Создаем маркер с опциями redMarkersOptions
+        var marker = L.marker(latlng, {
+            icon: L.icon(redMarkerOptions)
+        });
+
+        // Устанавливаем всплывающий текст из свойства name
+        marker.bindPopup(feature.properties.name);
+
+        // Добавляем маркер в кластер redMarkers
+        redMarkers.addLayer(marker);
+
+        // Возвращаем маркер
+        return marker;
+    }
+}).addTo(map);
+        // Добавление кластеризированных маркеров на карту
+        map.addLayer(greenMarkers);
+        map.addLayer(redMarkers);
+
+        // Добавление обработчика событий для увеличения карты при масштабировании
+        map.on('zoomend', function() {
+            var currentZoom = map.getZoom();
+            if (currentZoom > 10) {
+                greenMarkers.disableClustering();
+                redMarkers.disableClustering();
+            } else {
+                greenMarkers.enableClustering();
+                redMarkers.enableClustering();
+            }
+        });
+
+        // Обработчик события для увеличения карты при клике на кластер
+        greenMarkers.on('clusterclick', function(event) {
+            map.flyToBounds(event.layer.getBounds());
+        });
+
+        redMarkers.on('clusterclick', function(event) {
+            map.flyToBounds(event.layer.getBounds());
+        });
+
+    </script>
+</body>
+</html>
